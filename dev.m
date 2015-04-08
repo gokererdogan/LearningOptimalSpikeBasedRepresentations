@@ -2,7 +2,7 @@
 n = 100;
 ts = linspace(0, 1, n);
 
-% a simple step function
+% a simple step function input
 x = zeros(n, 1);
 x(30:50) = 0.1;
 x(70:85) = 0.1;
@@ -42,7 +42,7 @@ for t = 2:n
     
     % calculate prediction 
     % NOTE: this is probably not the right way to calculate the prediction.
-    % Eqn. 1 in paper containt derivative of xhat, I just approximated that
+    % Eqn. 1 in paper contains derivative of xhat, I just approximated that
     % here with xhat(t) - xhat(t-1), which is probably not the best idea
     xh(t) = (w*o(t) + xh(t-1))/2;
 end
