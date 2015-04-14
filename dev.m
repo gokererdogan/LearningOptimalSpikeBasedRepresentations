@@ -15,8 +15,10 @@ xp(70) = 1;
 xp(86) = -1;
 
 % sine wave input
-x = sin(ts)*2;
-xp = cos(ts)*2;
+x = sin(ts)*0.3;
+x = x';
+xp = cos(ts)*0.3;
+xp = xp';
 
 %% Single neuron case
 
@@ -29,13 +31,24 @@ o = zeros(T,1);
 % v(t)
 V = zeros(T,1);
 % xhat(t) (prediction)
-xh = zeros(T,1);
 xhat = zeros(T,1);
+
+
+V2 = zeros(T, 1);
+o2 = zeros(T, 1);
+xhat2 = zeros(T,1);
 
 for t = 2:T
     % membrane voltage update equation
+    % There is something wrong with this update (Eqn. 4 in the paper)
+    % With this update, the neuron spikes continuously. Imagine that
+    % c = x + x' = 0.3, w = 0.1, o can take values 0 and 1; then, dv is 
+    % always positive.
     dv = -v + w*(x(t-1) + xp(t-1)) - w^2*o(t-1);
     v = v + dv;
+    
+    % below is the solution of above update equation (Eqn. 4)
+    % v = exp(-t) * sum(-w * exp(1:t) * (w*o(1:t) - x(1:t) - xp(1:t)));
     
     V(t) = v;
     
@@ -44,29 +57,46 @@ for t = 2:T
         o(t) = 1;
     end
     
-    % calculate prediction 
-    % NOTE: this is probably not the right way to calculate the prediction.
-    % Eqn. 1 in paper contains derivative of xhat, I just approximated that
-    % here with xhat(t) - xhat(t-1), which is probably not the best idea
-    xh(t) = (w*o(t) + xh(t-1))/2;
+    % alternative membrane voltage equation
+    % this seems to work better
+    v2 = w*(x(t) - xhat2(t-1)); % current prediction is previous timestep's prediction
+    V2(t) = v2;
+    
+    if v2 > w^2/2
+        o2(t) = 1;
+    end
+    
+    % calculate prediction
     % Wolfram Alpha can solve the differential equation in Eqn.1 
     % http://www.wolframalpha.com/input/?i=dx%28t%29%2Fdt+%3D+-x%28t%29+%2B+w*o%28t%29
     % The solution is
-    %   x(t) = exp(-t) + exp(-t) * integral_{1 to T} exp(z)*w*o(z) dz
+    %   x(t) = c*exp(-t) + exp(-t) * integral_{1 to T} exp(z)*w*o(z) dz
     % Since o(z) is a spike train
     %   integral_{1 to T} exp(z)*w*o(z) dz = sum_{z in spike_times} w*exp(z)
     % Then
-    % x(t) = exp(-t) * (1 + sum_{spike times} w*exp(z))
-    xhat(t) = exp(-t) * (1 + (w * (exp(1:t) * o(1:t))));
+    % x(t) = exp(-t) * (c + sum_{spike times} w*exp(z))
+    % What about the initial condition? What should we set c? If we assume
+    % x(0) = 0, then c = 0. Then x(t) becomes
+    % x(t) = exp(-t) * (sum_{spike times} w*exp(z))
+    xhat(t) = exp(-t) * (w * (exp(1:t) * o(1:t)));
+    
+    xhat2(t) = exp(-t) * (w * (exp(1:t) * o2(1:t)));
 end
 
 hold on
 plot(ts, V)
 plot(ts, x)
-plot(ts, xh)
 plot(ts, xhat)
 scatter(ts, o)
-legend('V', 'x', 'xh', 'xhat', 'o')
+legend('V', 'x', 'xhat', 'o')
+
+figure
+hold on
+plot(ts, V2)
+plot(ts, x)
+plot(ts, xhat2)
+scatter(ts, o2)
+legend('V2', 'x', 'xhat2', 'o2')
 
 %% Homogeneous network of neurons
 % number of neurons
