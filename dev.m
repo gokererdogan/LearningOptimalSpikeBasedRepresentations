@@ -1,34 +1,34 @@
 %% Input signal and shared parameters
 
 % simulation time (in seconds)
-T = 2;
+T = 0.03;
 % step size
-stepsize = 0.01;
+stepsize = 0.1*(1/1000); % 0.1 msecs
 % number of time points
 N = (T/stepsize)+1;
 % time input
 t = 0:stepsize:T;
 
 % a simple step function input
-x = zeros(N, 1);
-x(30:50) = 0.1;
-x(70:85) = 0.1;
-xp = zeros(N, 1);
-xp(30) = 1;
-xp(51) = -1;
-xp(70) = 1;
-xp(86) = -1;
+% x = zeros(N, 1);
+% x(30:50) = 0.1;
+% x(70:85) = 0.1;
+% xp = zeros(N, 1);
+% xp(30) = 1;
+% xp(51) = -1;
+% xp(70) = 1;
+% xp(86) = -1;
 
 % sine wave input
-x = sin(t)*0.1;
-x = x';
-xp = cos(t)*0.1;
-xp = xp';
+% x = sin(t)*0.05;
+% x = x';
+% xp = cos(t)*0.05;
+% xp = xp';
 
 % random walk input
 x = abs(cumsum(randn(N, 1)));
-x = x * 0.005;
-x = smooth(x, 10);
+x = x * 0.0005;
+x = smooth(x, 50);
 % derivative
 xp = [0; (x(2:N) - x(1:(N-1))) / stepsize];
 %% Single neuron case
@@ -107,6 +107,7 @@ for i = 2:N
     xhat3(i) = xh;
 end
 
+figure
 hold on
 plot(t, V)
 plot(t, x)
@@ -124,86 +125,137 @@ scatter(t, o2)
 legend('V2', 'x', 'xhat2', 'xhat3', 'o2')
 
 %% Homogeneous network of neurons
-% TODO: add another population of neurons with negative weights!
 
-% number of neurons
-K = 50;
+% number of neurons in the total population
+K = 100; % half have positive, half have negative weights
+
 % regularization weight
-mu = 1e-3;
+mu = 1e-6;
 
 % current membrane voltage
 v = zeros(K,1);
+
 % output weight
 w = 0.1*ones(K,1);
-% spike train
-o = zeros(K,N);
-o2 = zeros(K,N);
-% v(t)
-V = zeros(K,N);
-V2 = zeros(K,N);
-% xhat(t) (prediction)
-xhat = zeros(K,1);
-xhat2 = zeros(K,1);
-xhat3 = zeros(K,1);
-xh = 0;
+w((K/2+1):K) = -w(1);
+
+% right now, we use two ways to calculate voltages, that is why we have two
+% spike trains, voltage and prediction matrices
+%
+% the first way is using the differential equation for voltage (eqn. 15 in
+% the paper). however, it does not work as well as the second way. I don't
+% know why exactly, but I think it has something to do with how we update
+% the voltages once a neuron fires.
+%
+% the second way is using the direct definition for voltage (difference
+% between input and prediction of the population). This method works pretty
+% well.
 
 % THINK: why don't we get the same results from different ways of
 % calculating voltage (V and V2)?
 
+% spike train
+o = zeros(K,N);
+o2 = zeros(K,N);
+
+% v(t)
+V = zeros(K,N);
+V2 = zeros(K,N);
+
+% xhat(t) (prediction)
+xhat = zeros(K,1);
+xhat2 = zeros(K,1);
+
+% this expression is used multiple times in updates; it determines how much
+% one spike changes the voltage.
+reset_amount = (w*w' + mu*eye(K));
+
 for i = 2:N
-    % update voltage neuron by neuron (otherwise, neurons seems to fire
-    % synchronously)
-    prev_o = o(:,i-1);
-    % go in random order over neurons
-    % TODO: we can get the same effect (random firing) with adding some
-    % noise to the voltage updates. this is what's done in the paper.
-    n_order = randperm(K);
-    xhatc = xhat3(i-1);
-    for j = 1:K
-        k = n_order(j);
+    % current xhat. we need this for the second voltage update method.
+    xhatc = xhat2(i-1);
+    
+    % if we update all neurons at the same time and let all the neurons
+    % that exceed threshold fire, we get synchronous firing. If a neuron
+    % fires, it should reset its own voltage and others because now the 
+    % network makes a better prediction.
+    % in other words, to get asynchronous spiking, we need to let only a 
+    % single neuron fire at one time, and update the voltages after each
+    % spike.
+    % in the paper, they also mention adding noise to voltages will make
+    % them fire asynchronously but we still need to fire one spike at a
+    % time. Our simulations so far show that we don't need to add noise.
+    
+    % try firing K times (K is arbitrary here, but it makes sense to make 
+    % it as large as the number of neurons)
+    for dt = 1:K 
+        % ----------------------------------------------------------------
+        % Voltage Update Method 1
         % membrane voltage update equation
-        dv = -v + (w * (x(i-1) + xp(i-1))) - ((w*w' + mu*eye(K))*prev_o);
-        % THINK: should I divide dv by K or not?
+        dv = -v + (w * (x(i-1) + xp(i-1))) - (reset_amount*o(:, i-1));
         v = v + (stepsize * dv);
         V(:,i) = v;
         
-        % fire spike if V_i > T_i
-        if (v(k) / stepsize) > (w(k)^2/2 + (mu/2))
-            o(k,i) = 1;
-            % neuron n spiked, other neurons should know about this.
-            prev_o(k) = prev_o(k) + 1;
+        % fire a single neuron, the one with maximum difference
+        diff = (V(:,i) / stepsize) - diag(0.5 * (reset_amount));
+        % pick all the neurons with maximum voltage
+        if max(diff) > 0
+            maxk = find(diff==max(diff));
+            % pick one randomly and fire
+            k = maxk(randi(numel(maxk)));
+            o(k, i) = 1;
+            % update prediction
+            % WARNING: I am not sure if this is the right way to reset!
+            v = v - (stepsize * reset_amount(:,k));
         end
+        % ----------------------------------------------------------------
         
-        % second way of calculating voltage
-        V2(:,i) = w*(x(i) - xhatc) - mu*mean(o2(:,1:i), 2);
+        % ----------------------------------------------------------------
+        % Voltage Update Method 2
+        % second way of calculating voltage (below Eqn. 14 in the paper)
+        % the second term is mu*o_bar. o_bar is given below eqn. 6 in the
+        % paper
+        V2(:,i) = w*(x(i) - xhatc) - (mu * exp(-t(i)) * o2(:,1:i) * exp(t(1:i))');
         
-        % fire spike if V_i > T_i
-        if (V2(k,i) / stepsize) > (w(k)^2/2 + (mu/2))
-            o2(k,i) = 1;
-            % neuron n spiked, other neurons should know about this.
+        % NOTE: this does not prevent a neuron from firing multiple times
+        % in one step (of course that is not possible, but it will try to
+        % fire). this does not seem to be a problem though.
+        
+        % fire a single neuron, the one with maximum difference
+        diff = (V2(:,i) / stepsize) - diag(0.5 * (w*w' + (mu*eye(K))));
+        % pick all the neurons with maximum voltage
+        if max(diff) > 0
+            maxk = find(diff==max(diff));
+            % pick one randomly and fire
+            k = maxk(randi(numel(maxk)));
+            o2(k, i) = 1;
+            % update prediction
             dxhatc = -xhatc + w(k);
             xhatc = xhatc + (stepsize * dxhatc);
         end
+        % ----------------------------------------------------------------
         
     end
     
     % calculate prediction 
     xhat(i) = exp(-t(i)) * (stepsize * (w' * o(:, 1:i) * exp(t(1:i))'));
-    % yet another way to calculate the prediction
-    % discretize the differential equation xhat' = -xhat + w*o
-    dxh = -xh + w'*o(:, i);
-    xh = xh + (stepsize * dxh);
-    xhat2(i) = xh;
+    xhat2(i) = exp(-t(i)) * (stepsize * (w' * o2(:, 1:i) * exp(t(1:i))'));
     
-    xhat3(i) = exp(-t(i)) * (stepsize * (w' * o2(:, 1:i) * exp(t(1:i))'));
+    % yet another way to calculate the prediction is to 
+    % discretize the differential equation xhat' = -xhat + w*o
+    % it gives the same prediction with the direct way of calculating
+    % predictions
+    % dxh = -xh + w'*o(:, i);
+    % xh = xh + (stepsize * dxh);
+    % xhat2(i) = xh;
+    
+    
 end
 
 hold on
 plot(t, x)
 plot(t, xhat)
 plot(t, xhat2)
-plot(t, xhat3)
-legend('x', 'xhat', 'xhat2', 'xhat3')
+legend('x', 'xhat', 'xhat2')
 
 % spike train
 figure
