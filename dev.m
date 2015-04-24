@@ -11,8 +11,8 @@ t = 0:stepsize:T;
 
 % a simple step function input
 % x = zeros(N, 1);
-% x(30:50) = 0.1;
-% x(70:85) = 0.1;
+% x(30:50) = 0.05;
+% x(70:85) = 0.05;
 % xp = zeros(N, 1);
 % xp(30) = 1;
 % xp(51) = -1;
@@ -112,8 +112,11 @@ hold on
 plot(t, V)
 plot(t, x)
 plot(t, xhat)
+%scatter(t, o)
+legend('V', 'x', 'xhat')
+
+figure
 scatter(t, o)
-legend('V', 'x', 'xhat', 'o')
 
 figure
 hold on
@@ -121,8 +124,11 @@ plot(t, V2)
 plot(t, x)
 plot(t, xhat2)
 plot(t, xhat3)
+%scatter(t, o2)
+legend('V2', 'x', 'xhat2', 'xhat3')
+
+figure
 scatter(t, o2)
-legend('V2', 'x', 'xhat2', 'xhat3', 'o2')
 
 %% Homogeneous network of neurons
 
