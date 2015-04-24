@@ -262,6 +262,7 @@ plot(t, x)
 plot(t, xhat)
 plot(t, xhat2)
 legend('x', 'xhat', 'xhat2')
+print('F1','-dpng')
 
 % spike train
 figure
@@ -270,6 +271,7 @@ scatter(I, J)
 axis([0 N+1 0 K+1])
 xlabel('time')
 ylabel('neuron')
+print('F2','-dpng')
 
 % spike train
 figure
@@ -278,4 +280,4 @@ scatter(I, J)
 axis([0 N+1 0 K+1])
 xlabel('time')
 ylabel('neuron')
-
+print('F3','-dpng')
