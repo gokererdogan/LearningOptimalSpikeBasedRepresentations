@@ -114,9 +114,11 @@ plot(t, x)
 plot(t, xhat)
 %scatter(t, o)
 legend('V', 'x', 'xhat')
+print('sing_F1','-dpng')
 
 figure
 scatter(t, o)
+print('sing_F2','-dpng')
 
 figure
 hold on
@@ -126,9 +128,11 @@ plot(t, xhat2)
 plot(t, xhat3)
 %scatter(t, o2)
 legend('V2', 'x', 'xhat2', 'xhat3')
+print('sing_F3','-dpng')
 
 figure
 scatter(t, o2)
+print('sing_F4','-dpng')
 
 %% Homogeneous network of neurons
 
@@ -257,12 +261,13 @@ for i = 2:N
     
 end
 
+figure
 hold on
 plot(t, x)
 plot(t, xhat)
 plot(t, xhat2)
 legend('x', 'xhat', 'xhat2')
-print('F1','-dpng')
+print('pop_F1','-dpng')
 
 % spike train
 figure
@@ -271,7 +276,7 @@ scatter(I, J)
 axis([0 N+1 0 K+1])
 xlabel('time')
 ylabel('neuron')
-print('F2','-dpng')
+print('pop_F2','-dpng')
 
 % spike train
 figure
@@ -280,4 +285,4 @@ scatter(I, J)
 axis([0 N+1 0 K+1])
 xlabel('time')
 ylabel('neuron')
-print('F3','-dpng')
+print('pop_F3','-dpng')
