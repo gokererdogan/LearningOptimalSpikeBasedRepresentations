@@ -114,11 +114,11 @@ plot(t, x)
 plot(t, xhat)
 %scatter(t, o)
 legend('V', 'x', 'xhat')
-print('sing_F1','-dpng')
+print('sing_F1_g','-dpng')
 
 figure
 scatter(t, o)
-print('sing_F2','-dpng')
+print('sing_F2_g','-dpng')
 
 figure
 hold on
@@ -128,11 +128,11 @@ plot(t, xhat2)
 plot(t, xhat3)
 %scatter(t, o2)
 legend('V2', 'x', 'xhat2', 'xhat3')
-print('sing_F3','-dpng')
+print('sing_F3_g','-dpng')
 
 figure
 scatter(t, o2)
-print('sing_F4','-dpng')
+print('sing_F4_g','-dpng')
 
 %% Homogeneous network of neurons
 
