@@ -4,7 +4,7 @@ close all
 %% Input signal and shared parameters
 
 % simulation time (in mseconds)
-T = 50;
+T = 20;
 % step size
 stepsize = 0.01; % 0.1 msecs
 % number of time points
@@ -22,20 +22,17 @@ xp = zeros(N, 1);
 G = 0.01;
 
 % autapse weight
-initial_w = 0.0001;
+initial_w = 0.000001;
 w = ones(N,1) * initial_w;
 
 % spike train
 o = zeros(N,1);
-o2 = zeros(N, 1);
 
 % v(t)
 V = zeros(N,1);
-V2 = zeros(N, 1);
 
 % xhat(t) (prediction)
 xhat = zeros(N,1);
-xhat2 = zeros(N,1);
 
 % instantaeous firing rate
 obar = zeros(N,1);
@@ -51,8 +48,10 @@ for i = 2:N
         o(i) = (1 / stepsize);
     end
     
-    obar(i) = exp(-t(i)) .* (o(1:i)' * exp(t(1:i))');
-    w(i) = w(i-1) + rate * V(i)*obar(i);
+    %obar(i) = stepsize * exp(-t(i)) .* (o(1:i)' * exp(t(1:i))');
+    do = -obar(i-1) + o(i-1);
+    obar(i) = obar(i-1) + (stepsize * do);
+    w(i) = w(i-1) + rate*V(i)*obar(i);
     
     % alternative membrane voltage equation
     % gives pretty much the same results with the above voltage update
@@ -87,7 +86,7 @@ title('V');
  
 subplot(2, 2, 3)
 scatter(t, o)
-ylim([-1 2])
+%ylim([-1 2])
 title('o')
 
 subplot(2,2,4)
