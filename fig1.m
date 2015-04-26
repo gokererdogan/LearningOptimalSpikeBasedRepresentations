@@ -1,3 +1,6 @@
+clear
+close all
+
 %% Input signal and shared parameters
 
 % simulation time (in mseconds)
@@ -15,8 +18,12 @@ xp = zeros(N, 1);
 
 %% Single neuron case
 
-% output weight
-w = 0.01;
+% fixed output weight
+G = 0.01;
+
+% autapse weight
+initial_w = 0.0001;
+w = ones(N,1) * initial_w;
 
 % spike train
 o = zeros(N,1);
@@ -30,50 +37,62 @@ V2 = zeros(N, 1);
 xhat = zeros(N,1);
 xhat2 = zeros(N,1);
 
+% instantaeous firing rate
+obar = zeros(N,1);
+% learning rate
+rate = 0.01;
+
 for i = 2:N
     % membrane voltage update equation (Eqn. 4)
-    dv = -V(i-1) + w*(x(i-1) + xp(i-1)) - w^2*o(i-1);
+    dv = -V(i-1) + G*(x(i-1) + xp(i-1)) - w(i-1)*o(i-1);
     V(i) = V(i-1) + (stepsize * dv);
     
-    if V(i) > w^2/2
+    if V(i) > G^2/2
         o(i) = (1 / stepsize);
     end
     
+    obar(i) = exp(-t(i)) .* (o(1:i)' * exp(t(1:i))');
+    w(i) = w(i-1) + rate * V(i)*obar(i);
+    
     % alternative membrane voltage equation
     % gives pretty much the same results with the above voltage update
-    V2(i) = w*(x(i-1) - xhat2(i-1)); 
+    %V2(i) = G*(x(i-1) - xhat2(i-1)); 
     
-    if (V2(i)/stepsize) > w^2/2
-        o2(i) = 1;
-    end
+    %if (V2(i)/stepsize) > G^2/2
+    %   o2(i) = 1;
+    %end
     
     % prediction from the first way of calculating voltage
-    % xhat(i) = exp(-t(i)) * (stepsize * (w * (exp(t(1:i)) * o(1:i))));
-    dxh = -xhat(i-1) + w*o(i);
+    % xhat(i) = exp(-t(i)) * (stepsize * (G * (exp(t(1:i)) * o(1:i))));
+    dxh = -xhat(i-1) + G*o(i);
     xhat(i) = xhat(i-1) + (stepsize * dxh);
-    % xhat(i) = x(i) - (V(i)/w);
+    % xhat(i) = x(i) - (V(i)/G);
     % prediction from the second way of calculating voltage
-    xhat2(i) = exp(-t(i)) * (stepsize * (w * (exp(t(1:i)) * o2(1:i))));
+    %xhat2(i) = exp(-t(i)) * (stepsize * (G * (exp(t(1:i)) * o2(1:i))));
     
 end
 
-
 figure(1)
-%plot(t, x)
-%plot(t, xhat)
+subplot(2,2,1)
 semilogy(t, x);
 hold on
 semilogy(t, xhat);
 axis([0 T 1e-2 1]);
-%plot(t, V)
-% plot(t, xhat2)
 legend('x', 'xhat')
+title('x, xhat')
+
+subplot(2,2,2)
+plot(t, V);
+title('V');
+ 
+subplot(2, 2, 3)
+scatter(t, o)
+ylim([-1 2])
+title('o')
+
+subplot(2,2,4)
+plot(t, w)
+title('w')
 
 figure(2)
-plot(t, V);
-
-figure(3)
-subplot(2, 1, 1)
-scatter(t, o)
-subplot(2, 1, 2)
-scatter(t, o2)
+plot(t, obar)
