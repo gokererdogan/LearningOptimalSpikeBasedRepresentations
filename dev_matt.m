@@ -3,7 +3,7 @@
 % simulation time (in seconds)
 T = 8;
 % step size
-stepsize = 10^-3; % 1 msecs
+stepsize = 10^-2; % 1 msecs
 % number of time points
 N = (T/stepsize)+1;
 % time input
@@ -48,22 +48,27 @@ T = G^2/2;
 initial_w = 0.0001;
 w = ones(N, 1) * initial_w;
 w2 = ones(N, 1) * initial_w;
+w3 = ones(N, 1) * initial_w;
+
 % learning rate (tau in the paper -- what should this be??)
 a = 0.1;
 % spike train
 o = zeros(N,1);
+o2 = zeros(N, 1);
+o3 = zeros(N, 1);
+
 % v(t)
 V = zeros(N,1);
+V2 = zeros(N, 1);
+V3 = zeros(N, 1);
+
 % xhat(t) (prediction)
 xhat = zeros(N,1);
-
-V2 = zeros(N, 1);
-o2 = zeros(N, 1);
 xhat2 = zeros(N,1);
 xhat3 = zeros(N,1);
 
 xh = 0;
-dxh = 0;
+%dxh = 0;
 
 for i = 2:N
     
@@ -82,21 +87,30 @@ for i = 2:N
     
     
     % prediction from the first way of calculating voltage
-    xhat(i) = exp(-t(i)) * (stepsize * (G * (exp(t(1:i)) * o(1:i))));
+    xhat(i) = exp(-t(i)) * (G * (exp(t(1:i)) * o(1:i)));
     % prediction from the second way of calculating voltage
-    xhat2(i) = exp(-t(i)) * (stepsize * (G * (exp(t(1:i)) * o2(1:i))));
+    xhat2(i) = exp(-t(i)) * (G * (exp(t(1:i)) * o2(1:i)));
     
     % yet another way to calculate the prediction
     % discretize the differential equation xhat' = -xhat + G*o
-    dxh = -xh + G*o2(i);
-    xh = xh + (stepsize * dxh);
-    xhat3(i) = xh;
+    dxh = -xhat3(i-1) + G*o3(i);
+    xhat3(i) = xhat3(i-1) + dxh;
     
     % membrane voltage update equation (Eqn. 4)
     c = x(i-1) + xp(i-1);
     dv = -v + G*c - w(i-1)*o(i-1);
-    v = v + (stepsize * dv);
+    v = v + dv;
     V(i) = v;
+    
+    % alternative membrane voltage equation
+    % gives pretty much the same results with the above voltage update
+    v2 = G*(x(i-1) - xhat2(i-1)); 
+    V2(i) = v2;
+    
+    % voltage update coming from discretized xhat
+    dv3 = -V3(i-1) + G*c - w3(i-1)*o3(i-1);
+    V3(i) = V3(i) + dv3;
+    %V3(i) = G*(x(i-1) - xhat3(i-1));
     
     % below is the solution of above update equation (Eqn. 4)
     % v = exp(-t) * sum(- stepsize * G * exp(1:t) * (G*o(1:t) - x(1:t) - xp(1:t)));
@@ -109,24 +123,29 @@ for i = 2:N
     % I don't really have any theoretical justifications of this; I guess
     % it also comes from discretization of the differential equation for
     % spiking rule
-    if (v/stepsize) > T
+    %if (v/stepsize) > T
+    if v > T
         o(i) = 1;
         w(i) = w(i-1) + w(i-1)*(w(i-1) - 2*T) / (a*(T - G*c - w(i-1)));
     else
         w(i) = w(i-1);
     end
     
+
     
-    % alternative membrane voltage equation
-    % gives pretty much the same results with the above voltage update
-    v2 = G*(x(i-1) - xhat2(i-1)); 
-    V2(i) = v2;
-    
-    if (v2/stepsize) > T
+    %if (v2/stepsize) > T
+    if v2 > T
         o2(i) = 1;
-        w2(i) = w2(i-1) + w2(i-1)*(w2(i-1) - 2*T) / (a*(T - G*c - w(i-1)));
+        w2(i) = w2(i-1) + w2(i-1)*(w2(i-1) - 2*T) / (a*(T - G*c - w2(i-1)));
     else
         w2(i) = w2(i-1);
+    end
+    
+    if V3(i) > T
+        o3(i) = 1;
+        w3(i) = w3(i-1) + w3(i-1)*(w3(i-1) - 2*T) / (a*(T - G*c - w3(i-1)));
+    else
+        w3(i) = w3(i-1);
     end
     
 end
@@ -164,12 +183,12 @@ end
 
 % plot each var separately for visibility
 % fig 1: input signal, voltages, output prediction, weights
-vars = {x V V2 xhat xhat2 xhat3 w w2};
-labels = {['x'] ['V'] ['V2'] ['xhat'] ['xhat2'] ['xhat3'] ['w'] ['w2']};
+vars = {V V2 V3 xhat xhat2 xhat3 w w2 w3};
+labels = {['V'] ['V2'] ['V3'] ['xhat'] ['xhat2'] ['xhat3'] ['w'] ['w2'] ['w3']};
 
 figure(1)
-rows = 4;
-cols = 2;
+rows = 3;
+cols = 3;
 for i = 1:length(vars)
     subplot(rows, cols, i);
     plot(t, vars{i});
@@ -178,11 +197,11 @@ end
 
 % fig 2: spikes
 figure(2)
-vars = {o o2};
-labels = {['o'] ['o2']};
+vars = {o o2 o3};
+labels = {['o'] ['o2'] ['o3']};
 for i = 1:length(vars)
-    subplot(2, 1, i);
-    scatter(t, vars{i}, 'x');
+    subplot(3, 1, i);
+    scatter(t, vars{i}, 'o');
     title(labels{i});
     ylim([-1 2]);
 end
