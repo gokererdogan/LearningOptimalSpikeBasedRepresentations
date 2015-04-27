@@ -34,8 +34,9 @@ V = zeros(N,1);
 % xhat(t) (prediction)
 xhat = zeros(N,1);
 
-% instantaeous firing rate
+% instantaneous firing rate
 obar = zeros(N,1);
+
 % learning rate
 rate = 0.01;
 
