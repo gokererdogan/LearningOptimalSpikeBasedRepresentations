@@ -3,7 +3,7 @@ close all
 %% Input signal and shared parameters
 
 % simulation time (in mseconds)
-T = 100;
+T = 1000;
 % step size
 stepsize = 0.1; % 0.1 msecs
 % number of time points
@@ -12,9 +12,9 @@ N = (T/stepsize)+1;
 t = 0:stepsize:T;
 
 % constant input
-x = ones(N, 1) * 0.01;
-x = ones(N, 1) * 0.002;
-xp = zeros(N, 1);
+% x = ones(N, 1) * 0.01;
+% x = ones(N, 1) * 0.002;
+% xp = zeros(N, 1);
 
 % linear ramp input
 % x = 0:(0.02/(N-1)):0.02;
@@ -22,24 +22,24 @@ xp = zeros(N, 1);
 % xp = [0; (x(2:N) - x(1:(N-1))) ./ stepsize];
 % 
 % % random walk input
-% x = abs(cumsum(randn(N, 1)));
-% x = x * 0.0005;
-% x = smooth(x, 50);
-% % derivative
-% xp = [0; (x(2:N) - x(1:(N-1))) / stepsize];
+x = (cumsum(randn(N, 1)));
+x = x * 0.0005;
+x = smooth(x, 200);
+% derivative
+xp = [0; (x(2:N) - x(1:(N-1))) / stepsize];
 
 %% Multiple neuron case
 
 % number of neurons
-K = 4;
+K = 50;
 
 % output weight
-G = [ones(K/2,1); ones(K/2,1)];
-G = 0.0005 * G;
-% G = randn(K,1) * 0.01;
+G = [ones(K/2,1); -ones(K/2,1)];
+G = 0.002 * G;
+% G = randn(K,1) * 0.0001;
 
 % recurrent connection weights (these are learned)
-w = (0.001^2) * ones(K,K,N);
+w = (0.00^2) * ones(K,K,N);
 
 % regularization weight 
 mu = 1e-8;
@@ -57,7 +57,9 @@ V = zeros(K,N);
 xhat = zeros(N,1);
 
 % learning rate
-rate = 0.01;
+rate = 0.05;
+
+w = repmat(G*G' + mu*eye(K), 1, 1, N);
 
 % distance of w to optimal weight matrix
 wdiff = zeros(N,1);
@@ -93,7 +95,7 @@ for i = 2:N
     % update weights
     do = -obar(:,i-1) + o(:,i-1);
     obar(:,i) = obar(:,i-1) + (stepsize * do);
-    w(:,:,i) = w(:,:,i-1) + rate*V(:,i)*obar(:,i)';
+    %w(:,:,i) = w(:,:,i-1) + rate*V(:,i)*obar(:,i)';
     
     wdiff(i) = sum(sum((w(:,:,i) - w_opt).^2)) / sum(sum(w_opt.^2));
     
@@ -101,28 +103,10 @@ for i = 2:N
     xhat(i) = xhat(i-1) + (stepsize * dxh);
 end
 
-
-figure(1)
-subplot(2,2,1)
-semilogy(t, x);
-hold on
-semilogy(t, xhat);
-legend('x', 'xhat')
-title('x, xhat')
-
-subplot(2,2,2)
-plot(t, V(1,:));
-title('V');
- 
-subplot(2, 2, 3)
-[I,J] = find(o'>0);
-scatter(I, J)
-axis([0 N+1 0 K+1])
-title('o')
-
-subplot(2,2,4)
-plot(t, wdiff)
-title('||w-w*||')
-
-figure(2)
-plot(t, obar)
+%%
+% calculate interspike intervals for neurons
+i = 40;
+st = find(o(i,:));
+isis = (st(2:numel(st)) - st(1:(numel(st)-1))) * stepsize;
+cv = std(isis) / mean(isis)
+histogram(isis)
