@@ -9,7 +9,7 @@ T = 20;
 stepsize = 0.01; % 0.1 msecs
 % number of time points
 N = (T/stepsize)+1;
-% time input
+% time inpute
 t = 0:stepsize:T;
 
 % constant input
@@ -19,10 +19,10 @@ xp = zeros(N, 1);
 %% Single neuron case
 
 % fixed output weight
-G = 0.01;
+G = 0.05;
 
 % autapse weight
-initial_w = 0.000001;
+initial_w = 0.000000001;
 w = ones(N,1) * initial_w;
 
 % spike train
@@ -37,7 +37,7 @@ xhat = zeros(N,1);
 % instantaeous firing rate
 obar = zeros(N,1);
 % learning rate
-rate = 0.01;
+rate = 0.001;
 
 for i = 2:N
     % membrane voltage update equation (Eqn. 4)
@@ -82,8 +82,10 @@ title('x, xhat')
 
 subplot(2,2,2)
 plot(t, V);
+hold on
+plot(t, ones(N, 1)*-G^2/2)
 title('V');
- 
+
 subplot(2, 2, 3)
 scatter(t, o)
 %ylim([-1 2])
@@ -91,7 +93,10 @@ title('o')
 
 subplot(2,2,4)
 plot(t, w)
+hold on
+plot(t, ones(N, 1)*G^2)
 title('w')
 
-figure(2)
-plot(t, obar)
+% figure(2)
+% plot(t, obar)
+% title('obar')
