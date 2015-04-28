@@ -95,6 +95,7 @@ for i = 2:N
     % update instantaneous firing rate
     do = -obar(:,i-1) + o(:,i-1);
     obar(:,i) = obar(:,i-1) + (stepsize * do);
+    
     % update weights
     w(:,:,i) = w(:,:,i-1) + rate*V(:,i)*obar(:,i)';
     

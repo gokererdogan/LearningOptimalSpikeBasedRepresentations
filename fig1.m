@@ -9,6 +9,7 @@
 % 1 in the paper.
 % 27 April 2015
 % Goker Erdogan
+
 clear
 close all
 
@@ -17,23 +18,23 @@ close all
 % simulation time (in mseconds)
 T = 20;
 % step size
-stepsize = 0.1; % 0.1 msecs
+stepsize = 0.01; % 0.1 msecs
 % number of time points
 N = (T/stepsize)+1;
 % time input
 t = 0:stepsize:T;
 
 % constant input
-x = ones(N, 1) * 0.015;
+x = ones(N, 1) * 0.1;
 xp = zeros(N, 1);
 
 %% Single neuron learning
 
 % fixed output weight
-G = 0.01;
+G = 0.05;
 
 % autapse weight
-initial_w = 0.000001;
+initial_w = 0.000000001;
 w = ones(N,1) * initial_w;
 
 % spike train
@@ -47,9 +48,8 @@ xhat = zeros(N,1);
 
 % instantaneous firing rate
 obar = zeros(N,1);
-
 % learning rate
-rate = 0.05;
+rate = 0.002;
 
 for i = 2:N
     % membrane voltage update equation (Eqn. 4)
@@ -108,6 +108,7 @@ print('fig/fig1_xxhat', '-dpng')
 figure
 hold on
 plot(t,V)
+plot(t, ones(N, 1)*-G^2/2)
 xlabel('time')
 ylabel('voltage')
 print('fig/fig1_voltage', '-dpng')
@@ -115,6 +116,7 @@ print('fig/fig1_voltage', '-dpng')
 figure
 hold on
 plot(t,w)
+plot(t, ones(N, 1)*G^2)
 xlabel('time')
 ylabel('weight')
 print('fig/fig1_weight', '-dpng')
