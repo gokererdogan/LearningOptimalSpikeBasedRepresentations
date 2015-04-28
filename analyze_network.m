@@ -30,8 +30,7 @@ rate_mean = zeros(K, runs);
 isi = cell(K, 1);
 
 % output weight
-G = ones(K,1);
-G = 0.001 * G;
+G = ones(K,1) * 0.001;
 
 for r = 1:runs
     r
@@ -53,7 +52,7 @@ for r = 1:runs
         isi{k} = [isi{k} ((spike_time(2:spike_count) - spike_time(1:(spike_count-1))) * stepsize)];
     end
 end
-
+%%
 % firing rate mean, variance and fano factor
 rm = mean(rate_mean, 2);
 rv = var(rate_mean, 0, 2);
