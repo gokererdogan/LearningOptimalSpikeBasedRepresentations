@@ -1,3 +1,14 @@
+%% Single neuron learning
+% This script implements learning for a single neuron with constant input
+% in the model proposed by 
+%   Bourdoukan R, Barrett DGT, Machens CK, Deneve S (2012), 
+%   Learning optimal spike based representations,
+%   Advances in Neural Information Processing Systems (NIPS) 25.
+%
+% This script is intended for generating the single neuron plots in Figure
+% 1 in the paper.
+% 27 April 2015
+% Goker Erdogan
 clear
 close all
 
@@ -6,17 +17,17 @@ close all
 % simulation time (in mseconds)
 T = 20;
 % step size
-stepsize = 0.01; % 0.1 msecs
+stepsize = 0.1; % 0.1 msecs
 % number of time points
 N = (T/stepsize)+1;
 % time input
 t = 0:stepsize:T;
 
 % constant input
-x = ones(N, 1) * 0.1;
+x = ones(N, 1) * 0.015;
 xp = zeros(N, 1);
 
-%% Single neuron case
+%% Single neuron learning
 
 % fixed output weight
 G = 0.01;
@@ -38,46 +49,37 @@ xhat = zeros(N,1);
 obar = zeros(N,1);
 
 % learning rate
-rate = 0.01;
+rate = 0.05;
 
 for i = 2:N
     % membrane voltage update equation (Eqn. 4)
     dv = -V(i-1) + G*(x(i-1) + xp(i-1)) - w(i-1)*o(i-1);
     V(i) = V(i-1) + (stepsize * dv);
     
+    % if above threshold, spike
     if V(i) > G^2/2
+        % note we need to scale the delta function with stepsize
         o(i) = (1 / stepsize);
     end
     
-    %obar(i) = stepsize * exp(-t(i)) .* (o(1:i)' * exp(t(1:i))');
+    % update instantaneous firing rate
     do = -obar(i-1) + o(i-1);
     obar(i) = obar(i-1) + (stepsize * do);
+    
+    % update autapse weight
     w(i) = w(i-1) + rate*V(i)*obar(i);
     
-    % alternative membrane voltage equation
-    % gives pretty much the same results with the above voltage update
-    %V2(i) = G*(x(i-1) - xhat2(i-1)); 
-    
-    %if (V2(i)/stepsize) > G^2/2
-    %   o2(i) = 1;
-    %end
-    
-    % prediction from the first way of calculating voltage
-    % xhat(i) = exp(-t(i)) * (stepsize * (G * (exp(t(1:i)) * o(1:i))));
+    % update prediction
     dxh = -xhat(i-1) + G*o(i);
     xhat(i) = xhat(i-1) + (stepsize * dxh);
-    % xhat(i) = x(i) - (V(i)/G);
-    % prediction from the second way of calculating voltage
-    %xhat2(i) = exp(-t(i)) * (stepsize * (G * (exp(t(1:i)) * o2(1:i))));
     
 end
 
 figure(1)
 subplot(2,2,1)
-semilogy(t, x);
+plot(t, x);
 hold on
-semilogy(t, xhat);
-axis([0 T 1e-2 1]);
+plot(t, xhat);
 legend('x', 'xhat')
 title('x, xhat')
 
@@ -87,12 +89,39 @@ title('V');
  
 subplot(2, 2, 3)
 scatter(t, o)
-%ylim([-1 2])
 title('o')
 
 subplot(2,2,4)
 plot(t, w)
 title('w')
 
-figure(2)
-plot(t, obar)
+% save figures
+figure
+hold on
+plot(t,x)
+plot(t, xhat)
+xlabel('time')
+ylabel('output')
+legend('x', 'xhat')
+print('fig/fig1_xxhat', '-dpng')
+
+figure
+hold on
+plot(t,V)
+xlabel('time')
+ylabel('voltage')
+print('fig/fig1_voltage', '-dpng')
+
+figure
+hold on
+plot(t,w)
+xlabel('time')
+ylabel('weight')
+print('fig/fig1_weight', '-dpng')
+
+figure
+hold on
+scatter(t,o*stepsize)
+axis([t(1) t(numel(t)) -0.1 1.1])
+xlabel('time')
+print('fig/fig1_spiketrain', '-dpng')

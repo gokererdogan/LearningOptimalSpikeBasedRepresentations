@@ -1,9 +1,23 @@
+%% Multiple neuron learning with constant input
+% This script implements learning for a network of multiple neurons 
+% with constant input in the model proposed by 
+%   Bourdoukan R, Barrett DGT, Machens CK, Deneve S (2012), 
+%   Learning optimal spike based representations,
+%   Advances in Neural Information Processing Systems (NIPS) 25.
+% Note that the network implementation is exactly the same with fig2.m
+% (also, the multiple neuron case is just a higher dimensional version of
+% the single neuron case implemented in fig1.m). 
+% This script is intended for generating the multiple neuron plots in 
+% Figure 1 in the paper.
+%
+% 27 April 2015
+% Goker Erdogan
 clear 
 close all
 %% Input signal and shared parameters
 
 % simulation time (in mseconds)
-T = 100;
+T = 200;
 % step size
 stepsize = 0.1; % 0.1 msecs
 % number of time points
@@ -12,31 +26,17 @@ N = (T/stepsize)+1;
 t = 0:stepsize:T;
 
 % constant input
-x = ones(N, 1) * 0.01;
-x = ones(N, 1) * 0.002;
+x = ones(N, 1) * 0.013;
 xp = zeros(N, 1);
 
-% linear ramp input
-% x = 0:(0.02/(N-1)):0.02;
-% x = x';
-% xp = [0; (x(2:N) - x(1:(N-1))) ./ stepsize];
-% 
-% % random walk input
-% x = abs(cumsum(randn(N, 1)));
-% x = x * 0.0005;
-% x = smooth(x, 50);
-% % derivative
-% xp = [0; (x(2:N) - x(1:(N-1))) / stepsize];
-
-%% Multiple neuron case
+%% Multiple neuron learning with constant input
 
 % number of neurons
-K = 4;
+K = 10;
 
 % output weight
 G = [ones(K/2,1); ones(K/2,1)];
-G = 0.0005 * G;
-% G = randn(K,1) * 0.01;
+G = 0.0003 * G;
 
 % recurrent connection weights (these are learned)
 w = (0.001^2) * ones(K,K,N);
@@ -57,7 +57,7 @@ V = zeros(K,N);
 xhat = zeros(N,1);
 
 % learning rate
-rate = 0.01;
+rate = 0.005;
 
 % distance of w to optimal weight matrix
 wdiff = zeros(N,1);
@@ -74,8 +74,10 @@ for i = 2:N
     threshold = (G*G' + mu*eye(K));
     
     for dt = 1:K
+        % any neuron above threshold?
         diff = V(:,i) - diag(0.5 * (threshold));
         if max(diff) > 0
+            % find all neurons above threshold
             maxk = find(diff==max(diff));
             % pick one randomly and fire
             k = maxk(randi(numel(maxk)));
@@ -90,13 +92,16 @@ for i = 2:N
         end
     end
     
-    % update weights
+    % update instantaneous firing rate
     do = -obar(:,i-1) + o(:,i-1);
     obar(:,i) = obar(:,i-1) + (stepsize * do);
+    % update weights
     w(:,:,i) = w(:,:,i-1) + rate*V(:,i)*obar(:,i)';
     
+    % calculate difference from optimal weight matrix
     wdiff(i) = sum(sum((w(:,:,i) - w_opt).^2)) / sum(sum(w_opt.^2));
     
+    % update prediction
     dxh = -xhat(i-1) + G'*o(:, i);
     xhat(i) = xhat(i-1) + (stepsize * dxh);
 end
@@ -123,6 +128,29 @@ title('o')
 subplot(2,2,4)
 plot(t, wdiff)
 title('||w-w*||')
+print('fig/fig1_multi', '-dpng')
 
-figure(2)
-plot(t, obar)
+% save figures
+figure
+hold on
+plot(t,x)
+plot(t, xhat)
+xlabel('time')
+ylabel('output')
+legend('x', 'xhat')
+print('fig/fig1_multi_xxhat', '-dpng')
+
+figure
+hold on
+plot(t,wdiff)
+xlabel('time')
+ylabel('||w-w*||/||w*||')
+print('fig/fig1_multi_weight', '-dpng')
+
+figure
+hold on
+[I,J] = find(o'>0);
+scatter(I, J)
+axis([0 N+1 0 K+1])
+xlabel('timestep')
+print('fig/fig1_multi_spiketrain', '-dpng')
