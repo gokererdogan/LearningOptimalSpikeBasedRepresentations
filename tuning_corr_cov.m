@@ -21,7 +21,7 @@ K = 10;
 mu = 1e-8;
 
 %% Simulate network runs
-runs = 1000;
+runs = 100;
 % output weight
 G = linspace(-0.005, 0.005, K);
 G = G';
@@ -29,25 +29,42 @@ G = G';
 spike_trains = zeros(K, N*runs);
 xs = zeros(N*runs, 1);
 
+% set of inputs
+ninputs = 40;
+inputs = linspace(-0.05, 0.05, ninputs);
+
 for r = 1:runs
     r
-    % generate random walk input
-    x = (cumsum(randn(N, 1)));
-    x = x * 0.001;
-    x = smooth(x, floor(N/20));
+%     % generate random walk input
+%     x = (cumsum(randn(N, 1)));
+%     x = x * 0.001;
+%     x = smooth(x, floor(N/20));
+%     % derivative
+%     xp = [0; (x(2:N) - x(1:(N-1))) / stepsize];
+%     
 
-    % derivative
-    xp = [0; (x(2:N) - x(1:(N-1))) / stepsize];
+    % generate stepwise constant input
+    ci = inputs(randperm(ninputs));
+    x = ones(N,1) * ci(ninputs);
+    perinputT = round(N / ninputs);
+    for i = 1:(ninputs-1)
+        x((((i-1)*perinputT)+1):(i*perinputT)) = ci(i);
+        xs(((N*(r-1))+1):(N*r), 1) = x;
+    end
+    xp = zeros(N,1);
     
-    xs(((N*(r-1))+1):(N*r), 1) = x;
-
     % simulate network
     [V, spike_train, firing_rate, xhat] = simulate_network(N, stepsize, x, xp, K, mu, G);
     spike_trains(:, ((N*(r-1))+1):(N*r)) = spike_train;
+
 end
 
+% plot(x)
+% hold on
+% plot(xhat)
+
 %% tuning curves and f prime
-nstep = 40;
+nstep = ninputs; % for stepwise constant input
 xstep = (max(xs) - min(xs)) / nstep;
 xrange = linspace(min(xs) - xstep/2, max(xs) + xstep/2, nstep+1);
 tuning = zeros(K, nstep);
@@ -56,6 +73,7 @@ tuning = zeros(K, nstep);
 % interval
 for s = 1:nstep
     tuning(:, s) = mean(spike_trains(:, xs<xrange(s+1) & xs>=xrange(s)),2);
+    % tuning(:, s) = mean(spike_trains(:, xs==inputs(s)),2);
 end
 
 plot(tuning')
